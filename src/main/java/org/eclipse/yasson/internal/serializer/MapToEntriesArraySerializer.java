@@ -106,8 +106,10 @@ public class MapToEntriesArraySerializer<K, V> implements MapSerializer.Delegate
         obj.forEach((key, value) -> {
             generator.writeStartObject();
             generator.writeKey(keyEntryName);
+            serializer.serializeKey();
             serializer.serializeItem(key, generator, ctx);
             generator.writeKey(valueEntryName);
+            serializer.serializeValue();
             serializer.serializeItem(value, generator, ctx);
             generator.writeEnd();
         });
