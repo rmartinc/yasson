@@ -104,7 +104,7 @@ public abstract class AbstractContainerDeserializer<T> extends AbstractItem<T> i
             case KEY_NAME:
                 break;
             case VALUE_NULL:
-                appendResult(null);
+                appendResult(null, context);
                 break;
             case END_OBJECT:
             case END_ARRAY:
@@ -192,6 +192,16 @@ public abstract class AbstractContainerDeserializer<T> extends AbstractItem<T> i
      * @param result An instance result of an item.
      */
     public abstract void appendResult(Object result);
+
+    /**
+     * Variant for appendResult but also passing the Unmarshalling context.
+     *
+     * @param result An instance result of an item.
+     * @param context Current unmarshalling context.
+     */
+    public void appendResult(Object result, Unmarshaller context) {
+        appendResult(result);
+    }
 
     /**
      * Returns parser context.

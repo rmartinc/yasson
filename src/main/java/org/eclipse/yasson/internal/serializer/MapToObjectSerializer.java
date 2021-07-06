@@ -96,6 +96,7 @@ public class MapToObjectSerializer<K, V> implements MapSerializer.Delegate<K, V>
                 continue;
             }
             generator.writeKey(keyString);
+            serializer.serializeValue();
             serializer.serializeItem(value, generator, ctx);
         }
     }
