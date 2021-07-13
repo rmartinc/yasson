@@ -45,7 +45,24 @@ public class YassonConfig extends JsonbConfig {
      * @see #withEagerParsing(Class...)
      */
     public static final String EAGER_PARSE_CLASSES = "yasson.eager-parse-classes";
-    
+
+    /**
+     * @see #withMapToObjectSerializerNullKey(String)
+     */
+    public static final String MAP_OBJECT_SERIALIZER_NULL_KEY = "yasson.mapToObjectSerializer.nullKey";
+
+    /**
+     * Property used to specify the key used when a null key is found in a
+     * MapToObjectSerializer. Default value is <em>String.value((Object)null)</em>
+     * which is the String <em>null</em>.
+     * @param mapToObjectSerializerNullKey The key to use for null key
+     * @return This YassonConfig instance
+     */
+    public YassonConfig withMapToObjectSerializerNullKey(String mapToObjectSerializerNullKey) {
+        setProperty(MAP_OBJECT_SERIALIZER_NULL_KEY, mapToObjectSerializerNullKey);
+        return this;
+    }
+
     /**
      * Property used to specify behaviour on deserialization when JSON document contains properties
      * which doesn't exist in the target class. Default value is 'false'.

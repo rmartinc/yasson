@@ -89,6 +89,11 @@ public class MapSerializer<K, V> extends AbstractContainerSerializer<Map<K, V>> 
     private final boolean nullable;
 
     /**
+     * Key to use for null in the MapToObjectSerializer.
+     */
+    private final String mapToObjectSerializerNullKey;
+
+    /**
      * Instance that is responsible for serialization.
      */
     private Delegate<K, V> serializer;
@@ -107,6 +112,7 @@ public class MapSerializer<K, V> extends AbstractContainerSerializer<Map<K, V>> 
         super(builder);
         actualTypeArgument = 0;
         nullable = builder.getJsonbContext().getConfigProperties().getConfigNullable();
+        mapToObjectSerializerNullKey = builder.getJsonbContext().getConfigProperties().getMapToObjectSerializerNullKey();
         serializer = null;
     }
 
@@ -147,7 +153,7 @@ public class MapSerializer<K, V> extends AbstractContainerSerializer<Map<K, V>> 
             }
             // Set proper serializing algorithm
             if (allStrings) {
-                serializer = new MapToObjectSerializer<>(this);
+                serializer = new MapToObjectSerializer<>(this, mapToObjectSerializerNullKey);
             } else {
                 serializer = new MapToEntriesArraySerializer<>(this);
             }

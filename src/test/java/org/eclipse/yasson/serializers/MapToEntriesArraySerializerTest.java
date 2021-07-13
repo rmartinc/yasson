@@ -910,4 +910,53 @@ public class MapToEntriesArraySerializerTest {
         MapObjectLocaleString resObject = jsonb.fromJson(json, MapObjectLocaleString.class);
         assertEquals(mapObject, resObject);
     }
+
+    private static class SerializerThread extends Thread {
+
+        final Jsonb jsonb;
+        final MapObjectLocaleString mapObject;
+        MapObjectLocaleString resObject;
+
+        public SerializerThread(Jsonb jsonb, MapObjectLocaleString mapObject) {
+            this.jsonb = jsonb;
+            this.mapObject = mapObject;
+        }
+
+        @Override
+        public void run() {
+            String json = jsonb.toJson(mapObject);
+            resObject = jsonb.fromJson(json, MapObjectLocaleString.class);
+        }
+
+        public MapObjectLocaleString getResult() {
+            return resObject;
+        }
+    }
+
+    @Test
+    public void testMapLocaleStringMT() throws Exception {
+        final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig()
+                .withSerializers(new LocaleSerializer())
+                .withDeserializers(new LocaleDeserializer()));
+
+        MapObjectLocaleString mapObject = new MapObjectLocaleString();
+        System.err.println("size=" + Locale.getAvailableLocales().length);
+        for (int i = 0; i < Locale.getAvailableLocales().length; i++) {
+            if (i != 100) {
+                mapObject.getValues().put(Locale.getAvailableLocales()[i], "value-" + i);
+            }
+        }
+
+        SerializerThread[] t = new SerializerThread[100];
+        for (int i = 0; i < t.length; i++) {
+            t[i] = new SerializerThread(jsonb, mapObject);
+            t[i].start();
+        }
+        for (int i = 0; i < t.length; i++) {
+            t[i].join();
+        }
+        for (int i = 0; i < t.length; i++) {
+            assertEquals(mapObject, t[i].getResult(), "Result not OK for thread " + i);
+        }
+    }
 }

@@ -82,6 +82,8 @@ public class JsonbConfigProperties {
     
     private final Set<Class<?>> eagerInitClasses;
 
+    private final String mapToObjectSerializerNullKey;
+
     /**
      * Creates new resolved JSONB config.
      *
@@ -103,6 +105,7 @@ public class JsonbConfigProperties {
         this.defaultMapImplType = initDefaultMapImplType();
         this.nullSerializer = initNullSerializer();
         this.eagerInitClasses = initEagerInitClasses();
+        this.mapToObjectSerializerNullKey = initMapToObjectSerializerNullKey();
     }
 
     private Class<?> initDefaultMapImplType() {
@@ -121,7 +124,7 @@ public class JsonbConfigProperties {
     }
 
     private boolean initZeroTimeDefaultingForJavaTime() {
-        return getBooleanConfigProperty(YassonConfig.ZERO_TIME_PARSE_DEFAULTING, false);
+        return getConfigProperty(YassonConfig.ZERO_TIME_PARSE_DEFAULTING, Boolean.class, false);
     }
 
     @SuppressWarnings("unchecked")
@@ -231,11 +234,15 @@ public class JsonbConfigProperties {
     }
 
     private boolean initConfigNullable() {
-        return getBooleanConfigProperty(JsonbConfig.NULL_VALUES, false);
+        return getConfigProperty(JsonbConfig.NULL_VALUES, Boolean.class, false);
     }
 
     private boolean initConfigFailOnUnknownProperties() {
-        return getBooleanConfigProperty(YassonConfig.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return getConfigProperty(YassonConfig.FAIL_ON_UNKNOWN_PROPERTIES, Boolean.class, false);
+    }
+
+    private String initMapToObjectSerializerNullKey() {
+        return getConfigProperty(YassonConfig.MAP_OBJECT_SERIALIZER_NULL_KEY, String.class, String.valueOf((Object) null));
     }
 
     @SuppressWarnings("unchecked")
@@ -286,16 +293,16 @@ public class JsonbConfigProperties {
         return failOnUnknownProperties;
     }
 
-    private boolean getBooleanConfigProperty(String propertyName, boolean defaultValue) {
+    private <T> T getConfigProperty(String propertyName,  Class<T> declaredType, T defaultValue) {
         final Optional<Object> property = jsonbConfig.getProperty(propertyName);
         if (property.isPresent()) {
             final Object result = property.get();
-            if (!(result instanceof Boolean)) {
+            if (!declaredType.isInstance(result)) {
                 throw new JsonbException(Messages.getMessage(MessageKeys.JSONB_CONFIG_PROPERTY_INVALID_TYPE,
                                                              propertyName,
-                                                             Boolean.class.getSimpleName()));
+                                                             declaredType.getSimpleName()));
             }
-            return (boolean) result;
+            return declaredType.cast(result);
         }
         return defaultValue;
     }
@@ -340,7 +347,7 @@ public class JsonbConfigProperties {
     }
 
     private boolean initStrictJson() {
-        return getBooleanConfigProperty(JsonbConfig.STRICT_IJSON, false);
+        return getConfigProperty(JsonbConfig.STRICT_IJSON, Boolean.class, false);
     }
 
     /**
@@ -427,5 +434,14 @@ public class JsonbConfigProperties {
     
     public Set<Class<?>> getEagerInitClasses() {
         return eagerInitClasses;
+    }
+
+    /**
+     * Returns the string used for null key in the MapToObjectSerializer.
+     *
+     * @return The string used for null key in that map serializer/deserializer
+     */
+    public String getMapToObjectSerializerNullKey() {
+        return mapToObjectSerializerNullKey;
     }
 }

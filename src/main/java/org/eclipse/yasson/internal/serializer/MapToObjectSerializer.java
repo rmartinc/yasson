@@ -38,12 +38,19 @@ public class MapToObjectSerializer<K, V> implements MapSerializer.Delegate<K, V>
     private final MapSerializer<K, V> serializer;
 
     /**
+     * String key to use when key is null.
+     */
+    private final String mapToObjectSerializerNullKey;
+
+    /**
      * Creates an instance of {@link Map} serialization to {@code JsonObject}.
      *
      * @param serializer reference to {@link Map} serialization entry point
+     * @param mapToObjectSerializerNullKey The string key used for null
      */
-    protected MapToObjectSerializer(MapSerializer<K, V> serializer) {
+    protected MapToObjectSerializer(MapSerializer<K, V> serializer, String mapToObjectSerializerNullKey) {
         this.serializer = serializer;
+        this.mapToObjectSerializerNullKey = mapToObjectSerializerNullKey;
     }
 
     /**
@@ -83,7 +90,9 @@ public class MapToObjectSerializer<K, V> implements MapSerializer.Delegate<K, V>
         for (Map.Entry<K, V> entry : obj.entrySet()) {
             final String keyString;
             K key = entry.getKey();
-            if (key instanceof Enum<?>) {
+            if (key == null) {
+                keyString = mapToObjectSerializerNullKey;
+            } else if (key instanceof Enum<?>) {
                 keyString = ((Enum<?>) key).name();
             } else {
                 keyString = String.valueOf(key);

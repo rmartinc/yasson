@@ -12,6 +12,7 @@
 
 package org.eclipse.yasson.internal.serializer;
 
+import java.io.StringReader;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -22,28 +23,58 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import jakarta.json.bind.serializer.JsonbDeserializer;
+import jakarta.json.spi.JsonProvider;
 import jakarta.json.stream.JsonParser;
 
 import org.eclipse.yasson.internal.JsonbParser;
 import org.eclipse.yasson.internal.JsonbRiParser;
 import org.eclipse.yasson.internal.ReflectionUtils;
 import org.eclipse.yasson.internal.Unmarshaller;
+import org.eclipse.yasson.internal.properties.MessageKeys;
+import org.eclipse.yasson.internal.properties.Messages;
 
 /**
  * Item implementation for {@link java.util.Map} fields.
- * According to JSON specification object can have only string keys, given that maps could only be parsed
- * from JSON objects, implementation is bound to String type.
+ * According to JSON specification object can have only string keys.
+ * Nevertheless the implementation lets the key be a basic object that was
+ * serialized into a string representation. The key is parsed using a different
+ * deserializer that tries to convert the String key into the parametrized type.
+ * If not possible implementation is bound to String type.
  *
  * @param <T> map type
  */
 public class MapDeserializer<T extends Map<?, ?>> extends AbstractContainerDeserializer<T> implements EmbeddedItem {
 
+    private static final Logger LOGGER = Logger.getLogger(MapDeserializer.class.getName());
+
     /**
-     * Type of value in the map. (Keys must always be Strings, because of JSON spec)
+     * Type of the key in the map.
+     */
+    private final Type mapKeyRuntimeType;
+
+    /**
+     * Type of value in the map.
      */
     private final Type mapValueRuntimeType;
+
+    /**
+     * The jsonProvider used to create the parsers for keys
+     */
+    private final JsonProvider jsonProvider;
+
+    /**
+     * The unmarshaller used to deserialize keys
+     */
+    private final Unmarshaller keyUnmarshaller;
+
+    /**
+     * Key used for null in the MapToObjectSerializer.
+     */
+    private final String mapToObjectSerializerNullKey;
 
     private final T instance;
 
@@ -54,10 +85,16 @@ public class MapDeserializer<T extends Map<?, ?>> extends AbstractContainerDeser
      */
     protected MapDeserializer(DeserializerBuilder builder) {
         super(builder);
+        mapKeyRuntimeType = getRuntimeType() instanceof ParameterizedType
+                ? ReflectionUtils.resolveType(this, ((ParameterizedType) getRuntimeType()).getActualTypeArguments()[0])
+                : Object.class;
         mapValueRuntimeType = getRuntimeType() instanceof ParameterizedType
                 ? ReflectionUtils.resolveType(this, ((ParameterizedType) getRuntimeType()).getActualTypeArguments()[1])
                 : Object.class;
 
+        mapToObjectSerializerNullKey = builder.getJsonbContext().getConfigProperties().getMapToObjectSerializerNullKey();
+        jsonProvider = builder.getJsonbContext().getJsonProvider();
+        keyUnmarshaller = new Unmarshaller(builder.getJsonbContext());
         this.instance = createInstance(builder);
     }
 
@@ -99,7 +136,19 @@ public class MapDeserializer<T extends Map<?, ?>> extends AbstractContainerDeser
 
     @SuppressWarnings("unchecked")
     private <V> void appendCaptor(String key, V value) {
-        ((Map<String, V>) getInstance(null)).put(key, value);
+        Object keyObject = key;
+        if (mapToObjectSerializerNullKey.equals(key)) {
+            keyObject = null;
+        } else {
+            try {
+                // try to deserialize the key into the type
+                keyObject = keyUnmarshaller.deserialize(mapKeyRuntimeType, new JsonbRiParser(jsonProvider.createParser(new StringReader("\"" + key + "\""))));
+            } catch (Exception e) {
+                // because of compatibility just warn and continue using the String key as before
+                LOGGER.log(Level.WARNING, Messages.getMessage(MessageKeys.DESERIALIZE_VALUE_ERROR, mapKeyRuntimeType), e);
+            }
+        }
+        ((Map<Object, V>) getInstance(null)).put(keyObject, value);
     }
 
     @Override
